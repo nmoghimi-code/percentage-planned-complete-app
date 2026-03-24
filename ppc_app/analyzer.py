@@ -38,6 +38,7 @@ class SummaryRow:
     total_actualized_count: int
     unplanned_actualized_count: int
     planned_completion_percentage: float
+    total_actualized_over_planned_percentage: float
     planned_share_of_actualized_percentage: float
 
 
@@ -169,7 +170,7 @@ def _analyze_activity_dates(
 ) -> list[ActivityCheck]:
     checks: list[ActivityCheck] = []
     for activity in previous_activities:
-        planned_date = activity.planned_start if date_type == "start" else activity.planned_finish
+        planned_date = _previous_horizon_date(activity, date_type)
         if planned_date is None:
             continue
         if not (previous_data_date <= planned_date <= current_data_date):
@@ -212,7 +213,7 @@ def _find_current_actualized_activities(
         previous_activity, match_method = _match_activity(activity, previous_index)
         planned_date = None
         if previous_activity:
-            planned_date = previous_activity.planned_start if date_type == "start" else previous_activity.planned_finish
+            planned_date = _previous_horizon_date(previous_activity, date_type)
 
         checks.append(
             ActivityCheck(
@@ -289,6 +290,11 @@ def _build_summary_row(
     total_actualized_count = len(actualized_checks)
     unplanned_actualized_count = sum(1 for check in actualized_checks if not check.actualized)
     planned_completion_percentage = (actualized_planned_count / planned_count * 100.0) if planned_count else 0.0
+    total_actualized_over_planned_percentage = (
+        total_actualized_count / planned_count * 100.0
+        if planned_count
+        else 0.0
+    )
     planned_share_of_actualized_percentage = (
         actualized_planned_count / total_actualized_count * 100.0
         if total_actualized_count
@@ -301,9 +307,21 @@ def _build_summary_row(
         total_actualized_count=total_actualized_count,
         unplanned_actualized_count=unplanned_actualized_count,
         planned_completion_percentage=planned_completion_percentage,
+        total_actualized_over_planned_percentage=total_actualized_over_planned_percentage,
         planned_share_of_actualized_percentage=planned_share_of_actualized_percentage,
     )
 
 
 def _filter_task_dependent(activities: list[Activity]) -> list[Activity]:
     return [activity for activity in activities if is_task_dependent_type(activity.activity_type)]
+
+
+def _previous_horizon_date(activity: Activity, date_type: str) -> datetime | None:
+    if date_type == "start":
+        if activity.actual_start is not None:
+            return None
+        return activity.planned_start or activity.remaining_start
+
+    if activity.actual_finish is not None:
+        return None
+    return activity.planned_finish or activity.remaining_finish

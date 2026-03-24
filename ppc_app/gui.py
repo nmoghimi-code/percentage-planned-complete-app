@@ -7,7 +7,7 @@ from tkinter import filedialog, messagebox, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-from .analyzer import ActualizedActivityDetail, AnalysisResult, analyze_schedules
+from .analyzer import ActivityCheck, ActualizedActivityDetail, AnalysisResult, analyze_schedules
 from .xer_parser import parse_xer_file
 
 
@@ -26,6 +26,8 @@ class PPCAnalyzerApp:
 
         self.starts_tree: ttk.Treeview | None = None
         self.finishes_tree: ttk.Treeview | None = None
+        self.planned_start_tree: ttk.Treeview | None = None
+        self.planned_finish_tree: ttk.Treeview | None = None
         self.actualized_planned_start_tree: ttk.Treeview | None = None
         self.actualized_unplanned_start_tree: ttk.Treeview | None = None
         self.actualized_planned_finish_tree: ttk.Treeview | None = None
@@ -103,13 +105,28 @@ class PPCAnalyzerApp:
         parent.columnconfigure(0, weight=1)
         parent.rowconfigure(1, weight=1)
         parent.rowconfigure(3, weight=1)
+        parent.rowconfigure(5, weight=1)
 
+        planned_window_label = "Planned Starts From Previous Update" if detail_type == "start" else "Planned Finishes From Previous Update"
         planned_label = "Actualized Planned Starts" if detail_type == "start" else "Actualized Planned Finishes"
         unplanned_label = "Actualized Unplanned Starts" if detail_type == "start" else "Actualized Unplanned Finishes"
 
-        ttk.Label(parent, text=planned_label).grid(row=0, column=0, sticky="w", pady=(0, 4))
+        ttk.Label(parent, text=planned_window_label).grid(row=0, column=0, sticky="w", pady=(0, 4))
+        planned_window_frame = ttk.Frame(parent)
+        planned_window_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
+        planned_window_frame.columnconfigure(0, weight=1)
+        planned_window_frame.rowconfigure(0, weight=1)
+        planned_window_tree = self._create_planned_detail_tree(planned_window_frame)
+        planned_window_tree.grid(row=0, column=0, sticky="nsew")
+        planned_window_scrollbar = ttk.Scrollbar(
+            planned_window_frame, orient="vertical", command=planned_window_tree.yview
+        )
+        planned_window_tree.configure(yscrollcommand=planned_window_scrollbar.set)
+        planned_window_scrollbar.grid(row=0, column=1, sticky="ns")
+
+        ttk.Label(parent, text=planned_label).grid(row=2, column=0, sticky="w", pady=(0, 4))
         planned_frame = ttk.Frame(parent)
-        planned_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 12))
+        planned_frame.grid(row=3, column=0, sticky="nsew", pady=(0, 12))
         planned_frame.columnconfigure(0, weight=1)
         planned_frame.rowconfigure(0, weight=1)
         planned_tree = self._create_actualized_detail_tree(planned_frame)
@@ -118,9 +135,9 @@ class PPCAnalyzerApp:
         planned_tree.configure(yscrollcommand=planned_scrollbar.set)
         planned_scrollbar.grid(row=0, column=1, sticky="ns")
 
-        ttk.Label(parent, text=unplanned_label).grid(row=2, column=0, sticky="w", pady=(0, 4))
+        ttk.Label(parent, text=unplanned_label).grid(row=4, column=0, sticky="w", pady=(0, 4))
         unplanned_frame = ttk.Frame(parent)
-        unplanned_frame.grid(row=3, column=0, sticky="nsew")
+        unplanned_frame.grid(row=5, column=0, sticky="nsew")
         unplanned_frame.columnconfigure(0, weight=1)
         unplanned_frame.rowconfigure(0, weight=1)
         unplanned_tree = self._create_actualized_detail_tree(unplanned_frame)
@@ -130,11 +147,39 @@ class PPCAnalyzerApp:
         unplanned_scrollbar.grid(row=0, column=1, sticky="ns")
 
         if detail_type == "start":
+            self.planned_start_tree = planned_window_tree
             self.actualized_planned_start_tree = planned_tree
             self.actualized_unplanned_start_tree = unplanned_tree
         else:
+            self.planned_finish_tree = planned_window_tree
             self.actualized_planned_finish_tree = planned_tree
             self.actualized_unplanned_finish_tree = unplanned_tree
+
+    def _create_planned_detail_tree(self, parent: ttk.Frame) -> ttk.Treeview:
+        columns = ("branch", "activity_id", "activity_name", "planned_date", "actual_date", "status", "match_method")
+        tree = ttk.Treeview(parent, columns=columns, show="headings", height=10)
+        headings = {
+            "branch": "WBS Branch",
+            "activity_id": "Activity ID",
+            "activity_name": "Activity Name",
+            "planned_date": "Planned Date",
+            "actual_date": "Actual Date",
+            "status": "Actualized In Window",
+            "match_method": "Match Method",
+        }
+        widths = {
+            "branch": 130,
+            "activity_id": 130,
+            "activity_name": 260,
+            "planned_date": 140,
+            "actual_date": 140,
+            "status": 120,
+            "match_method": 120,
+        }
+        for column in columns:
+            tree.heading(column, text=headings[column])
+            tree.column(column, width=widths[column], anchor="w")
+        return tree
 
     def _create_actualized_detail_tree(self, parent: ttk.Frame) -> ttk.Treeview:
         columns = ("branch", "activity_id", "activity_name", "planned_date", "actual_date", "match_method")
@@ -168,6 +213,7 @@ class PPCAnalyzerApp:
             "total_actualized_count",
             "unplanned_actualized_count",
             "planned_completion_percentage",
+            "total_actualized_over_planned_percentage",
             "planned_share_of_actualized_percentage",
         )
         tree = ttk.Treeview(parent, columns=columns, show="headings", height=4)
@@ -177,6 +223,7 @@ class PPCAnalyzerApp:
         tree.heading("total_actualized_count", text="Total Actualized")
         tree.heading("unplanned_actualized_count", text="Unplanned Actualized")
         tree.heading("planned_completion_percentage", text="Planned Completion %")
+        tree.heading("total_actualized_over_planned_percentage", text="Total Actuals / Planned %")
         tree.heading("planned_share_of_actualized_percentage", text="Planned Share Of Actuals %")
         tree.column("branch", width=150, anchor="w")
         tree.column("planned_count", width=90, anchor="center")
@@ -184,6 +231,7 @@ class PPCAnalyzerApp:
         tree.column("total_actualized_count", width=120, anchor="center")
         tree.column("unplanned_actualized_count", width=140, anchor="center")
         tree.column("planned_completion_percentage", width=150, anchor="center")
+        tree.column("total_actualized_over_planned_percentage", width=165, anchor="center")
         tree.column("planned_share_of_actualized_percentage", width=180, anchor="center")
         return tree
 
@@ -223,6 +271,8 @@ class PPCAnalyzerApp:
 
         self._populate_summary_tree(self.starts_tree, result.starts_summary)
         self._populate_summary_tree(self.finishes_tree, result.finishes_summary)
+        self._populate_planned_detail_tree(self.planned_start_tree, result.start_details)
+        self._populate_planned_detail_tree(self.planned_finish_tree, result.finish_details)
         self._populate_actualized_detail_tree(
             self.actualized_planned_start_tree, result.actualized_planned_start_details
         )
@@ -252,7 +302,31 @@ class PPCAnalyzerApp:
                     row.total_actualized_count,
                     row.unplanned_actualized_count,
                     f"{row.planned_completion_percentage:.1f}%",
+                    f"{row.total_actualized_over_planned_percentage:.1f}%",
                     f"{row.planned_share_of_actualized_percentage:.1f}%",
+                ),
+            )
+
+    def _populate_planned_detail_tree(
+        self,
+        tree: ttk.Treeview | None,
+        rows: list[ActivityCheck],
+    ) -> None:
+        if tree is None:
+            return
+        tree.delete(*tree.get_children())
+        for row in rows:
+            tree.insert(
+                "",
+                "end",
+                values=(
+                    row.branch,
+                    row.activity_id,
+                    row.activity_name,
+                    row.planned_date.strftime("%Y-%m-%d %H:%M"),
+                    row.actual_date.strftime("%Y-%m-%d %H:%M") if row.actual_date else "",
+                    "Yes" if row.actualized else "No",
+                    row.match_method,
                 ),
             )
 

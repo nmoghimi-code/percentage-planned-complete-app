@@ -26,13 +26,13 @@ DATA_DATE_FIELDS = (
 )
 
 PLANNED_START_FIELDS = (
-    "target_start_date",
     "early_start_date",
+    "target_start_date",
 )
 
 PLANNED_FINISH_FIELDS = (
-    "target_end_date",
     "early_end_date",
+    "target_end_date",
 )
 
 ACTUAL_START_FIELDS = (
@@ -75,6 +75,8 @@ class Activity:
     activity_id: str
     name: str
     activity_type: str
+    remaining_start: datetime | None
+    remaining_finish: datetime | None
     planned_start: datetime | None
     planned_finish: datetime | None
     actual_start: datetime | None
@@ -164,6 +166,8 @@ def parse_xer_file(path: str | Path) -> XerSchedule:
                 activity_id=_first_value(row, ACTIVITY_ID_FIELDS),
                 name=row.get("task_name", ""),
                 activity_type=row.get("task_type", ""),
+                remaining_start=parse_xer_datetime(row.get("restart_date")),
+                remaining_finish=parse_xer_datetime(row.get("reend_date")),
                 planned_start=_parse_first_datetime(row, PLANNED_START_FIELDS),
                 planned_finish=_parse_first_datetime(row, PLANNED_FINISH_FIELDS),
                 actual_start=_parse_first_datetime(row, ACTUAL_START_FIELDS),

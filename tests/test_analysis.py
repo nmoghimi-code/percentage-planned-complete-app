@@ -29,13 +29,14 @@ class AnalysisTests(unittest.TestCase):
                         "%R\t12\t1\t10\tPRE-01\tPreconstruction Area",
                         "%R\t13\t1\t11\tCON-01\tConstruction Area",
                         "%T\tTASK",
-                        "%F\ttask_id\tproj_id\twbs_id\ttask_code\ttask_name\ttask_type\ttarget_start_date\ttarget_end_date\tact_start_date\tact_end_date",
-                        "%R\t100\t1\t12\tA100\tEarly Permit\tTask Dependent\t2024-02-02 08:00\t2024-02-07 17:00\t\t",
-                        "%R\t101\t1\t12\tA101\tLong Lead Review\tTask Dependent\t2024-02-03 08:00\t2024-02-08 17:00\t\t",
-                        "%R\t200\t1\t13\tB200\tSite Prep\tTask Dependent\t2024-02-04 08:00\t2024-02-09 17:00\t\t",
-                        "%R\t201\t1\t13\tB201\tConcrete\tTask Dependent\t2024-02-05 08:00\t2024-02-10 17:00\t\t",
-                        "%R\t202\t1\t13\tB202\tLate Procurement\tTask Dependent\t2024-03-05 08:00\t2024-03-12 17:00\t\t",
-                        "%R\t203\t1\t13\tB203\tOwner Approval Milestone\tFinish Milestone\t2024-02-06 08:00\t2024-02-06 08:00\t\t",
+                        "%F\ttask_id\tproj_id\twbs_id\ttask_code\ttask_name\ttask_type\trestart_date\treend_date\tearly_start_date\tearly_end_date\ttarget_start_date\ttarget_end_date\tact_start_date\tact_end_date",
+                        "%R\t100\t1\t12\tA100\tEarly Permit\tTask Dependent\t2024-02-02 08:00\t2024-02-07 17:00\t2024-02-02 08:00\t2024-02-07 17:00\t2024-02-02 08:00\t2024-02-07 17:00\t\t",
+                        "%R\t101\t1\t12\tA101\tLong Lead Review\tTask Dependent\t2024-02-03 08:00\t2024-02-08 17:00\t2024-02-03 08:00\t2024-02-08 17:00\t2024-02-03 08:00\t2024-02-08 17:00\t\t",
+                        "%R\t200\t1\t13\tB200\tSite Prep\tTask Dependent\t2024-02-04 08:00\t2024-02-09 17:00\t2024-02-04 08:00\t2024-02-09 17:00\t2024-02-04 08:00\t2024-02-09 17:00\t\t",
+                        "%R\t201\t1\t13\tB201\tConcrete\tTask Dependent\t2024-02-05 08:00\t2024-02-10 17:00\t2024-02-05 08:00\t2024-02-10 17:00\t2024-02-05 08:00\t2024-02-10 17:00\t\t",
+                        "%R\t202\t1\t13\tB202\tLate Procurement\tTask Dependent\t2024-03-05 08:00\t2024-03-12 17:00\t2024-03-05 08:00\t2024-03-12 17:00\t2024-03-05 08:00\t2024-03-12 17:00\t\t",
+                        "%R\t203\t1\t13\tB203\tOwner Approval Milestone\tFinish Milestone\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t\t",
+                        "%R\t204\t1\t13\tB204\tFraming Closeout\tTask Dependent\t2024-01-31 08:00\t2024-02-12 17:00\t2024-01-20 08:00\t2024-02-12 17:00\t2024-01-20 08:00\t2024-03-01 17:00\t2024-01-25 08:00\t",
                     ]
                 ),
                 encoding="utf-8",
@@ -55,13 +56,14 @@ class AnalysisTests(unittest.TestCase):
                         "%R\t12\t1\t10\tPRE-01\tPreconstruction Area",
                         "%R\t13\t1\t11\tCON-01\tConstruction Area",
                         "%T\tTASK",
-                        "%F\ttask_id\tproj_id\twbs_id\ttask_code\ttask_name\ttask_type\ttarget_start_date\ttarget_end_date\tact_start_date\tact_end_date",
-                        "%R\t100\t1\t12\tA100\tEarly Permit\tTask Dependent\t2024-02-02 08:00\t2024-02-07 17:00\t2024-02-02 08:00\t2024-02-07 17:00",
-                        "%R\t101\t1\t12\t\tLong Lead Review\tTask Dependent\t2024-02-03 08:00\t2024-02-08 17:00\t2024-02-03 08:00\t",
-                        "%R\t200\t1\t13\tB200\tSite Prep\tTask Dependent\t2024-02-04 08:00\t2024-02-09 17:00\t2024-02-04 08:00\t2024-02-09 17:00",
-                        "%R\t201\t1\t13\tB201\tConcrete\tTask Dependent\t2024-02-05 08:00\t2024-02-10 17:00\t\t",
-                        "%R\t202\t1\t13\tB202\tLate Procurement\tTask Dependent\t2024-03-05 08:00\t2024-03-12 17:00\t2024-02-06 08:00\t2024-02-11 17:00",
-                        "%R\t203\t1\t13\tB203\tOwner Approval Milestone\tFinish Milestone\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00",
+                        "%F\ttask_id\tproj_id\twbs_id\ttask_code\ttask_name\ttask_type\trestart_date\treend_date\tearly_start_date\tearly_end_date\ttarget_start_date\ttarget_end_date\tact_start_date\tact_end_date",
+                        "%R\t100\t1\t12\tA100\tEarly Permit\tTask Dependent\t2024-02-02 08:00\t2024-02-07 17:00\t2024-02-02 08:00\t2024-02-07 17:00\t2024-02-02 08:00\t2024-02-07 17:00\t2024-02-02 08:00\t2024-02-07 17:00",
+                        "%R\t101\t1\t12\t\tLong Lead Review\tTask Dependent\t2024-02-03 08:00\t2024-02-08 17:00\t2024-02-03 08:00\t2024-02-08 17:00\t2024-02-03 08:00\t2024-02-08 17:00\t2024-02-03 08:00\t",
+                        "%R\t200\t1\t13\tB200\tSite Prep\tTask Dependent\t2024-02-04 08:00\t2024-02-09 17:00\t2024-02-04 08:00\t2024-02-09 17:00\t2024-02-04 08:00\t2024-02-09 17:00\t2024-02-04 08:00\t2024-02-09 17:00",
+                        "%R\t201\t1\t13\tB201\tConcrete\tTask Dependent\t2024-02-05 08:00\t2024-02-10 17:00\t2024-02-05 08:00\t2024-02-10 17:00\t2024-02-05 08:00\t2024-02-10 17:00\t\t",
+                        "%R\t202\t1\t13\tB202\tLate Procurement\tTask Dependent\t2024-03-05 08:00\t2024-03-12 17:00\t2024-03-05 08:00\t2024-03-12 17:00\t2024-03-05 08:00\t2024-03-12 17:00\t2024-02-06 08:00\t2024-02-11 17:00",
+                        "%R\t203\t1\t13\tB203\tOwner Approval Milestone\tFinish Milestone\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00\t2024-02-06 08:00",
+                        "%R\t204\t1\t13\tB204\tFraming Closeout\tTask Dependent\t2024-02-15 08:00\t2024-02-12 17:00\t2024-01-20 08:00\t2024-02-12 17:00\t2024-01-20 08:00\t2024-03-01 17:00\t2024-01-25 08:00\t2024-02-12 17:00",
                     ]
                 ),
                 encoding="utf-8",
@@ -88,21 +90,25 @@ class AnalysisTests(unittest.TestCase):
             self.assertEqual(starts["Construction"].actualized_planned_count, 1)
             self.assertEqual(starts["Construction"].total_actualized_count, 2)
             self.assertEqual(starts["Construction"].unplanned_actualized_count, 1)
-            self.assertEqual(finishes["Construction"].planned_count, 2)
-            self.assertEqual(finishes["Construction"].actualized_planned_count, 1)
-            self.assertEqual(finishes["Construction"].total_actualized_count, 2)
+            self.assertEqual(finishes["Construction"].planned_count, 3)
+            self.assertEqual(finishes["Construction"].actualized_planned_count, 2)
+            self.assertEqual(finishes["Construction"].total_actualized_count, 3)
             self.assertEqual(finishes["Construction"].unplanned_actualized_count, 1)
 
             self.assertAlmostEqual(starts["Construction"].planned_completion_percentage, 50.0)
             self.assertAlmostEqual(starts["Construction"].planned_share_of_actualized_percentage, 50.0)
+            self.assertAlmostEqual(finishes["Construction"].planned_completion_percentage, 66.6666666667, places=1)
+            self.assertAlmostEqual(finishes["Construction"].planned_share_of_actualized_percentage, 66.6666666667, places=1)
 
             self.assertEqual(len(result.actualized_planned_start_details), 3)
             self.assertEqual(len(result.actualized_unplanned_start_details), 1)
-            self.assertEqual(len(result.actualized_planned_finish_details), 2)
+            self.assertEqual(len(result.actualized_planned_finish_details), 3)
             self.assertEqual(len(result.actualized_unplanned_finish_details), 1)
 
             unplanned_start = result.actualized_unplanned_start_details[0]
             self.assertEqual(unplanned_start.activity_name, "Late Procurement")
+            planned_finish_names = {detail.activity_name for detail in result.actualized_planned_finish_details}
+            self.assertIn("Framing Closeout", planned_finish_names)
             self.assertNotIn(
                 "Owner Approval Milestone",
                 {detail.activity_name for detail in result.actualized_unplanned_start_details},

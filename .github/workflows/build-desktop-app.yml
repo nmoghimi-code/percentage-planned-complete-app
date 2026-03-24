@@ -16,7 +16,7 @@ jobs:
             executable_path: dist/PPCAnalyzer.exe
           - os: macos-latest
             artifact_name: PPCAnalyzer-macos
-            executable_path: dist/PPCAnalyzer.app
+            executable_path: PPCAnalyzer-macos.zip
 
     runs-on: ${{ matrix.os }}
 
@@ -43,6 +43,14 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           pyinstaller --noconfirm --clean --windowed --name PPCAnalyzer app.py
+
+      - name: Package macOS app bundle
+        if: runner.os == 'macOS'
+        run: |
+          mkdir release-macos
+          cp -R dist/PPCAnalyzer.app release-macos/
+          cp -R dist/PPCAnalyzer release-macos/
+          ditto -c -k --keepParent release-macos PPCAnalyzer-macos.zip
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

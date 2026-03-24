@@ -54,6 +54,7 @@ After pushing the project to GitHub:
    - `PPCAnalyzer-macos`
 
 The Windows artifact contains `PPCAnalyzer.exe`.
+The macOS artifact contains a zip file with both `PPCAnalyzer.app` and its required support folder. Keep them together after extracting.
 
 ## Current Assumptions
 

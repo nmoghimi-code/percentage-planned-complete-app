@@ -91,33 +91,42 @@ class XerSchedule:
     activities: list[Activity]
 
     def branch_activity_ids(self, branch_name: str) -> set[str]:
-        matching_roots = {
+        return {
             node.wbs_id
             for node in self.wbs_nodes.values()
             if node.project_id == self.project.project_id
-            and _node_matches_branch(node, branch_name)
+            and self._branch_for_wbs_id(node.wbs_id) == branch_name
         }
-        if not matching_roots:
-            return set()
-
-        descendants = set(matching_roots)
-        changed = True
-        while changed:
-            changed = False
-            for node in self.wbs_nodes.values():
-                if node.project_id != self.project.project_id:
-                    continue
-                if node.parent_wbs_id and node.parent_wbs_id in descendants and node.wbs_id not in descendants:
-                    descendants.add(node.wbs_id)
-                    changed = True
-        return descendants
 
     def activities_in_branch(self, branch_name: str) -> list[Activity]:
         branch_wbs_ids = self.branch_activity_ids(branch_name)
         return [activity for activity in self.activities if activity.wbs_id in branch_wbs_ids]
 
+    def _branch_for_wbs_id(self, wbs_id: str) -> str | None:
+        lineage: list[WBSNode] = []
+        current = self.wbs_nodes.get(wbs_id)
+        visited: set[str] = set()
+
+        while current and current.wbs_id not in visited:
+            lineage.append(current)
+            visited.add(current.wbs_id)
+            current = self.wbs_nodes.get(current.parent_wbs_id)
+
+        for node in reversed(lineage):
+            branch_name = _matched_branch_name(node)
+            if branch_name:
+                return branch_name
+        return None
+
 
 def parse_xer_file(path: str | Path) -> XerSchedule:
+    schedules = parse_xer_projects(path)
+    if not schedules:
+        raise ValueError(f"No analyzable projects found in {Path(path).name}")
+    return schedules[0]
+
+
+def parse_xer_projects(path: str | Path) -> list[XerSchedule]:
     source_path = Path(path)
     tables = _parse_tables(source_path)
 
@@ -125,62 +134,10 @@ def parse_xer_file(path: str | Path) -> XerSchedule:
     if not projects:
         raise ValueError(f"No PROJECT table rows found in {source_path.name}")
 
-    project_row = _select_project_row(projects)
-    project_id = project_row.get("proj_id", "")
-    project_name = project_row.get("proj_short_name") or project_row.get("proj_name") or source_path.stem
-
-    data_date = None
-    for field_name in DATA_DATE_FIELDS:
-        data_date = parse_xer_datetime(project_row.get(field_name))
-        if data_date:
-            break
-    if data_date is None:
-        raise ValueError(
-            f"Unable to determine the project data date from the PROJECT table in {source_path.name}"
-        )
-
-    project = ProjectInfo(project_id=project_id, name=project_name, data_date=data_date)
-
-    wbs_nodes: dict[str, WBSNode] = {}
-    for row in tables.get("PROJWBS", []):
-        if row.get("proj_id") != project.project_id:
-            continue
-        node = WBSNode(
-            wbs_id=row.get("wbs_id", ""),
-            project_id=row.get("proj_id", ""),
-            parent_wbs_id=row.get("parent_wbs_id", ""),
-            name=row.get("wbs_name", ""),
-            short_name=row.get("wbs_short_name", ""),
-        )
-        wbs_nodes[node.wbs_id] = node
-
-    activities: list[Activity] = []
-    for row in tables.get("TASK", []):
-        if row.get("proj_id") != project.project_id:
-            continue
-        activities.append(
-            Activity(
-                task_id=row.get("task_id", ""),
-                project_id=row.get("proj_id", ""),
-                wbs_id=row.get("wbs_id", ""),
-                activity_id=_first_value(row, ACTIVITY_ID_FIELDS),
-                name=row.get("task_name", ""),
-                activity_type=row.get("task_type", ""),
-                remaining_start=parse_xer_datetime(row.get("restart_date")),
-                remaining_finish=parse_xer_datetime(row.get("reend_date")),
-                planned_start=_parse_first_datetime(row, PLANNED_START_FIELDS),
-                planned_finish=_parse_first_datetime(row, PLANNED_FINISH_FIELDS),
-                actual_start=_parse_first_datetime(row, ACTUAL_START_FIELDS),
-                actual_finish=_parse_first_datetime(row, ACTUAL_FINISH_FIELDS),
-            )
-        )
-
-    return XerSchedule(
-        source_path=source_path,
-        project=project,
-        wbs_nodes=wbs_nodes,
-        activities=activities,
-    )
+    schedules: list[XerSchedule] = []
+    for project_row in projects:
+        schedules.append(_build_project_schedule(source_path, tables, project_row))
+    return schedules
 
 
 def parse_xer_datetime(raw_value: str | None) -> datetime | None:
@@ -287,8 +244,108 @@ def _first_value(row: dict[str, str], field_names: Iterable[str]) -> str:
     return ""
 
 
+def _build_project_schedule(
+    source_path: Path,
+    tables: dict[str, list[dict[str, str]]],
+    project_row: dict[str, str],
+) -> XerSchedule:
+    project_id = project_row.get("proj_id", "")
+    project_name = _resolve_project_name(source_path, tables, project_row)
+
+    data_date = None
+    for field_name in DATA_DATE_FIELDS:
+        data_date = parse_xer_datetime(project_row.get(field_name))
+        if data_date:
+            break
+    if data_date is None:
+        raise ValueError(
+            f"Unable to determine the project data date for project '{project_name}' in {source_path.name}"
+        )
+
+    project = ProjectInfo(project_id=project_id, name=project_name, data_date=data_date)
+
+    wbs_nodes: dict[str, WBSNode] = {}
+    for row in tables.get("PROJWBS", []):
+        if row.get("proj_id") != project.project_id:
+            continue
+        node = WBSNode(
+            wbs_id=row.get("wbs_id", ""),
+            project_id=row.get("proj_id", ""),
+            parent_wbs_id=row.get("parent_wbs_id", ""),
+            name=row.get("wbs_name", ""),
+            short_name=row.get("wbs_short_name", ""),
+        )
+        wbs_nodes[node.wbs_id] = node
+
+    activities: list[Activity] = []
+    for row in tables.get("TASK", []):
+        if row.get("proj_id") != project.project_id:
+            continue
+        activities.append(
+            Activity(
+                task_id=row.get("task_id", ""),
+                project_id=row.get("proj_id", ""),
+                wbs_id=row.get("wbs_id", ""),
+                activity_id=_first_value(row, ACTIVITY_ID_FIELDS),
+                name=row.get("task_name", ""),
+                activity_type=row.get("task_type", ""),
+                remaining_start=parse_xer_datetime(row.get("restart_date")),
+                remaining_finish=parse_xer_datetime(row.get("reend_date")),
+                planned_start=_parse_first_datetime(row, PLANNED_START_FIELDS),
+                planned_finish=_parse_first_datetime(row, PLANNED_FINISH_FIELDS),
+                actual_start=_parse_first_datetime(row, ACTUAL_START_FIELDS),
+                actual_finish=_parse_first_datetime(row, ACTUAL_FINISH_FIELDS),
+            )
+        )
+
+    return XerSchedule(
+        source_path=source_path,
+        project=project,
+        wbs_nodes=wbs_nodes,
+        activities=activities,
+    )
+
+
+def _resolve_project_name(
+    source_path: Path,
+    tables: dict[str, list[dict[str, str]]],
+    project_row: dict[str, str],
+) -> str:
+    project_name = (project_row.get("proj_name") or "").strip()
+    if project_name:
+        return project_name
+
+    project_id = project_row.get("proj_id", "")
+    project_wbs_rows = [row for row in tables.get("PROJWBS", []) if row.get("proj_id") == project_id]
+    project_wbs_ids = {row.get("wbs_id", "") for row in project_wbs_rows}
+
+    root_like_rows = [
+        row
+        for row in project_wbs_rows
+        if row.get("parent_wbs_id", "") not in project_wbs_ids
+    ]
+    ordered_rows = root_like_rows or project_wbs_rows
+    for row in ordered_rows:
+        wbs_name = (row.get("wbs_name") or "").strip()
+        if wbs_name:
+            return wbs_name
+
+    project_short_name = (project_row.get("proj_short_name") or "").strip()
+    if project_short_name:
+        return project_short_name
+
+    return source_path.stem
+
+
 def _node_matches_branch(node: WBSNode, branch_name: str) -> bool:
     return _text_matches_branch(node.name, branch_name) or _text_matches_branch(node.short_name, branch_name)
+
+
+def _matched_branch_name(node: WBSNode) -> str | None:
+    for branch_name in ("Preconstruction", "Construction", "Integrated Phased Planning"):
+        if _node_matches_branch(node, branch_name):
+            return branch_name
+    return None
 
 
 def _text_matches_branch(value: str | None, branch_name: str) -> bool:
@@ -314,6 +371,27 @@ def _text_matches_branch(value: str | None, branch_name: str) -> bool:
                 or compact == "con"
             )
             and not _text_matches_branch(value, "Preconstruction")
+            and not _is_post_construction(tokens, compact)
+        )
+
+    if branch_key == "integratedphasedplanning":
+        return (
+            "integratedphasedplanning" in compact
+            or compact == "ipp"
+            or "ipp" in tokens
+            or (
+                "integrated" in tokens
+                and "phased" in tokens
+                and any(token.startswith("plan") for token in tokens)
+            )
         )
 
     return branch_key in compact
+
+
+def _is_post_construction(tokens: set[str], compact: str) -> bool:
+    return (
+        "postconstruction" in compact
+        or "postcon" in compact
+        or ("post" in tokens and any(token.startswith(("construct", "const")) for token in tokens))
+    )
